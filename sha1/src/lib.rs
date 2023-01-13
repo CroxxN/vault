@@ -1,5 +1,9 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
+
+mod constants;
+mod sha1_performance;
+
 use std::path;
 #[derive(Debug, PartialEq)]
 enum CalcMode {
