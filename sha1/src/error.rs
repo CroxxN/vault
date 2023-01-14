@@ -4,4 +4,4 @@ pub enum Error {
     ChunckSplitError,
 }
 
-impl Error for Error {}
+impl std::error::Error for Error {}
