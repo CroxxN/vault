@@ -4,6 +4,7 @@
 
 // TODO: Remove unsafe, implement message to word array, and make the code ergonomic
 
+use crate::constants::K;
 use std::io::Read;
 use std::path::PathBuf;
 
@@ -34,13 +35,26 @@ impl Sha1 {
         }
     }
 
-    pub fn initiate_file(&mut self, message: PathBuf) {
-        let mut file = std::fs::File::open(message).unwrap();
-        let mut message = Vec::new();
-        file.read_to_end(&mut message).unwrap();
-        let len = message.len();
+    // pub fn initiate_file(&mut self, message: PathBuf) {
+    //     let mut file = std::fs::File::open(message).unwrap();
+    //     let mut message = Vec::new();
+    //     file.read_to_end(&mut message).unwrap();
+    //     let len = message.len();
+    // }
+    // pub fn from_str(msg: &str) {
+    //     // let bytes = msg.bytes().collect();
+    // }
+    fn f(&self, i: &i32) -> u32 {
+        if *i < 20 {
+            (self.f_buf[1] ^ self.f_buf[2]) | (!self.f_buf[1] ^ self.f_buf[3])
+        } else if *i < 40 || *i > 59 {
+            self.f_buf[1] ^ self.f_buf[2] ^ self.f_buf[3]
+        } else {
+            (self.f_buf[1] ^ self.f_buf[2])
+                | (self.f_buf[1] ^ self.f_buf[3])
+                | (self.f_buf[2] ^ self.f_buf[3])
+        }
     }
-
     fn compute_hash(&mut self) {
         // for t in 0..16 {
         //     self.word[t] = message[t];
@@ -55,8 +69,11 @@ impl Sha1 {
             self.f_buf[t] = self.h_buf[t].clone();
         }
         for t in 0..80 {
-            let temp =
-                self.f_buf[0].rotate_left(1) /* + f(x, y, z) */ + self.f_buf[4] + self.word[t];
+            let temp = self.f_buf[0].rotate_left(1)
+                + self.f(&t)
+                + self.f_buf[4]
+                + self.word[t as usize]
+                + K[((t - 1) / 19) as usize];
             self.f_buf[4] = self.f_buf[3];
             self.f_buf[3] = self.f_buf[2];
             self.f_buf[2] = self.f_buf[1].rotate_left(30);
