@@ -37,19 +37,19 @@ impl Sha1 {
         self.word[n]
     }
     pub fn append_hash(&mut self, input: &[u8]) {
-        if input.len() <= 56 {
-            self.process_hash_once(input);
+        self.message_length = (8 * input.len()) as u64;
+        if input.len() < 56 {
+            self.process_hash_last(input);
             return;
         }
-        self.process_hash_once(&input[..=56]);
-        self.num_blocks = (input.len() / 57) as u64;
-        let mut curr_chunk: usize = 57;
-        for i in 0..(self.num_blocks - 2) {
-            curr_chunk = curr_chunk + 57;
-            println!("Printing Loop {i}");
-            self.process_hash_multiple(&input[(curr_chunk - 57)..curr_chunk]);
+        self.num_blocks = (input.len() / 55) as u64;
+        let mut curr_chunk: usize = 0;
+        for _ in 0..(self.num_blocks) {
+            // curr_chunk = curr_chunk + 57;
+            self.process_hash_cont(&input[curr_chunk..(curr_chunk + 56)]);
+            curr_chunk = curr_chunk + 56;
         }
-        self.process_hash_multiple(&input[curr_chunk..]);
+        self.process_hash_last(&input[curr_chunk..]);
     }
     pub fn reset_hash(self) -> Self {
         Sha1::new()
@@ -59,38 +59,59 @@ impl Sha1 {
         temp.iter_mut().zip(input).for_each(|(t, i)| {
             *t = *i;
         });
+        temp[input.len()] = 0x80;
         temp.to_owned()
     }
-    fn process_hash_once(&mut self, input: &[u8]) {
-        let mut temp = Self::initialize_bits(input);
-        self.message_length = (8 * input.len()) as u64;
-        temp[input.len()] = temp[input.len()] | 0x80;
-        self.hash(&temp);
-    }
-    fn process_hash_multiple(&mut self, input: &[u8]) {
+    // Maybe you need to clean the words for each round trip of the message digest
+    fn process_hash(&mut self, input: &[u8]) {
         let temp = Self::initialize_bits(input);
-        self.message_length = (8 * input.len()) as u64;
-        self.hash(&temp);
-        // for i in 56..64 {
-        //     temp[i] = ((length * 8) << ((i - 56) * 8)) as u8;
-        // }
-    }
-    fn hash(&mut self, blocks: &[u8; 64]) {
         self.word
             .iter_mut()
             .zip(0..16)
             .enumerate()
             .for_each(|(tlen, (word, _))| {
                 let len = tlen * 4;
-                *word = (blocks[len + 3] as u32)
-                    | (blocks[len + 2] as u32) << 8
-                    | (blocks[len + 1] as u32) << 16
-                    | (blocks[len] as u32) << 24;
+                *word = (temp[len + 3] as u32)
+                    | (temp[len + 2] as u32) << 8
+                    | (temp[len + 1] as u32) << 16
+                    | (temp[len] as u32) << 24;
             });
         self.word[14] = (self.message_length & 0xff00) as u32;
         self.word[15] = (self.message_length & 0x00ff) as u32;
         self.compute_hash();
+        // self.hash(&temp);
     }
+    fn process_hash_last(&mut self, _input: &[u8]) {
+        self.process_hash(_input);
+    }
+    fn process_hash_cont(&mut self, _input: &[u8]) {
+        self.process_hash(_input);
+    }
+    // fn process_hash_multiple(&mut self, input: &[u8]) {
+    //     let mut temp = Self::initialize_bits(input);
+    //     self.message_length = (8 * input.len()) as u64;
+    //     temp[input.len()] = temp[input.len()] | 0x80;
+    //     self.hash(&temp);
+    //     // for i in 56..64 {
+    //     //     temp[i] = ((length * 8) << ((i - 56) * 8)) as u8;
+    //     // }
+    // }
+    // fn hash(&mut self, blocks: &[u8; 64]) {
+    //     self.word
+    //         .iter_mut()
+    //         .zip(0..16)
+    //         .enumerate()
+    //         .for_each(|(tlen, (word, _))| {
+    //             let len = tlen * 4;
+    //             *word = (blocks[len + 3] as u32)
+    //                 | (blocks[len + 2] as u32) << 8
+    //                 | (blocks[len + 1] as u32) << 16
+    //                 | (blocks[len] as u32) << 24;
+    //         });
+    //     self.word[14] = (self.message_length & 0xff00) as u32;
+    //     self.word[15] = (self.message_length & 0x00ff) as u32;
+    //     self.compute_hash();
+    // }
 
     // pub fn initiate_file(&mut self, message: PathBuf) {
     //     let mut file = std::fs::File::open(message).unwrap();
@@ -150,8 +171,9 @@ impl Sha1 {
 mod test {
 
     use super::*;
+    // Passes
     #[test]
-    fn hash() {
+    fn normal() {
         let mut sha = Sha1::new();
         sha.append_hash(b"abc");
         assert_eq!(
@@ -159,6 +181,35 @@ mod test {
             [0xA9993E36, 0x4706816A, 0xBA3E2571, 0x7850C26C, 0x9CD0D89D]
         );
     }
+    #[test]
+    fn only_a() {
+        let mut sha = Sha1::new();
+        sha.append_hash(b"a");
+        assert_eq!(
+            sha.get_hash(),
+            [0x86f7e437, 0xfaa5a7fc, 0xe15d1ddc, 0xb9eaeaea, 0x377667b8]
+        );
+    }
+    #[test]
+    fn empty() {
+        let mut sha = Sha1::new();
+        sha.append_hash(b"");
+        assert_eq!(
+            sha.get_hash(),
+            [0xda39a3ee, 0x5e6b4b0d, 0x3255bfef, 0x95601890, 0xafd80709]
+        );
+    }
+    // Passes
+    #[test]
+    fn maximum_one_block() {
+        let mut sha = Sha1::new();
+        sha.append_hash(b"abcdbcdecdefdefgefghfghighijhijkijkljkl");
+        assert_eq!(
+            sha.get_hash(),
+            [0xb5ed281b, 0xcb6242b2, 0x889eb9a9, 0xc1727f3e, 0x9ab6dac4]
+        );
+    }
+    // Fails
     #[test]
     fn long_hash() {
         let mut sha = Sha1::new();
@@ -168,24 +219,38 @@ mod test {
             [0x84983E44, 0x1C3BD26E, 0xBAAE4AA1, 0xF95129E5, 0xE54670F1]
         );
     }
+    // Fails
+    #[test]
+    fn long_long_hash() {
+        let mut sha = Sha1::new();
+        sha.append_hash(b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopqabcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
+        assert_eq!(
+            sha.get_hash(),
+            [0xafc53a4e, 0xa20856f9, 0x8e08dc6f, 0x3a5c9833, 0x137768ed]
+        );
+    }
+    // Passes
     #[test]
     fn first_word() {
         let mut sha = Sha1::new();
         sha.append_hash(b"abc");
         assert_eq!(sha.get_words(0), 0x61626380);
     }
+    // Passes
     #[test]
     fn second_word() {
         let mut sha = Sha1::new();
         sha.append_hash(b"abc");
         assert_eq!(sha.get_words(1), 0x0);
     }
+    // Passes
     #[test]
     fn last_word() {
         let mut sha = Sha1::new();
         sha.append_hash(b"abc");
         assert_eq!(sha.get_words(15), 0x18);
     }
+    // Passes
     #[test]
     fn seven_word() {
         let mut sha = Sha1::new();
