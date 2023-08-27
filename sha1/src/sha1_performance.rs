@@ -39,35 +39,52 @@ impl Sha1 {
     pub fn append_hash(&mut self, input: &[u8]) {
         self.message_length = (8 * input.len()) as u64;
         if input.len() < 56 {
-            self.process_hash_last(input);
+            self.process_hash_last(input, true);
             return;
         }
-        self.num_blocks = (input.len() / 55) as u64;
-        let mut curr_chunk: usize = 0;
-        for _ in 0..(self.num_blocks) {
-            // curr_chunk = curr_chunk + 57;
-            self.process_hash_cont(&input[curr_chunk..(curr_chunk + 56)]);
-            curr_chunk = curr_chunk + 56;
+        self.num_blocks = (input.len() / 64) as u64;
+        let last_index_value = input.len() % 64;
+        let mut curr_idx = 0;
+        for _ in 0..self.num_blocks {
+            self.process_hash_cont(&input[curr_idx..(curr_idx + 64)], false);
+            curr_idx = curr_idx + 64;
         }
-        self.process_hash_last(&input[curr_chunk..]);
+        if last_index_value < 56 {
+            self.process_hash_last(&input[curr_idx..], true);
+        } else {
+            dbg!(last_index_value);
+            self.process_hash_cont(&input[curr_idx..], true);
+            self.process_hash_last(&[0], false);
+        }
     }
     pub fn reset_hash(self) -> Self {
         Sha1::new()
     }
-    fn initialize_bits(input: &[u8]) -> [u8; 64] {
+    fn initialize_bits(input: &[u8], flag: bool) -> [u8; 64] {
         let temp: &mut [u8; 64] = &mut [0; 64];
         temp.iter_mut().zip(0..input.len()).for_each(|(t, i)| {
             *t = input[i];
         });
-        temp[input.len()] = 0x80;
+        if flag {
+            dbg!(input.len());
+            temp[input.len()] = 0x80;
+            dbg!(temp[input.len()]);
+        }
         temp.to_owned()
     }
     // Maybe you need to clean the words for each round trip of the message digest
-    fn process_hash(&mut self, input: &[u8]) {
-        let temp = Self::initialize_bits(input);
+    fn process_hash(&mut self, input: &[u8], flag: bool) {
+        let temp = Self::initialize_bits(input, flag);
+        dbg!(input.len() / 4);
+        let mut limit = input.len() / 4;
+        if flag {
+            limit = limit + 1;
+        }
         self.word
             .iter_mut()
-            .zip(0..14)
+            // This is where the logic falters
+            // ~fixed at 22:59
+            .zip(0..std::cmp::max(limit, 14))
             .enumerate()
             .for_each(|(tlen, (word, _))| {
                 let len = tlen * 4;
@@ -76,18 +93,17 @@ impl Sha1 {
                     | (temp[len + 1] as u32) << 16
                     | (temp[len] as u32) << 24;
             });
+        dbg!(self.word[input.len()]);
         self.compute_hash();
         // self.hash(&temp);
     }
-    fn process_hash_last(&mut self, _input: &[u8]) {
+    fn process_hash_last(&mut self, _input: &[u8], flag: bool) {
         self.word[14] = (self.message_length >> 32) as u32;
         self.word[15] = (self.message_length & 0xFFFFFFFF) as u32;
-        self.process_hash(_input);
-        self.word[14] = 0;
-        self.word[15] = 0;
+        self.process_hash(_input, flag);
     }
-    fn process_hash_cont(&mut self, _input: &[u8]) {
-        self.process_hash(_input);
+    fn process_hash_cont(&mut self, _input: &[u8], flag: bool) {
+        self.process_hash(_input, flag);
     }
 
     // pub fn initiate_file(&mut self, message: PathBuf) {
@@ -170,6 +186,15 @@ mod test {
         );
     }
     #[test]
+    fn a_and_b() {
+        let mut sha = Sha1::new();
+        sha.append_hash(b"ab");
+        assert_eq!(
+            sha.get_hash(),
+            [0xda23614e, 0x02469a0d, 0x7c7bd1bd, 0xab5c9c47, 0x4b1904dc]
+        );
+    }
+    #[test]
     fn empty() {
         let mut sha = Sha1::new();
         sha.append_hash(b"");
@@ -198,6 +223,7 @@ mod test {
             [0x84983E44, 0x1C3BD26E, 0xBAAE4AA1, 0xF95129E5, 0xE54670F1]
         );
     }
+    // Passes
     #[test]
     fn medium_hash() {
         let mut sha = Sha1::new();
@@ -207,7 +233,7 @@ mod test {
             [0x6af10122, 0x75c9b513, 0x7b29ac2a, 0x5ef9a64c, 0x98e42635]
         );
     }
-    // Fails
+    // Passes
     #[test]
     fn long_long_hash() {
         let mut sha = Sha1::new();
