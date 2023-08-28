@@ -137,8 +137,8 @@ impl Sha1 {
             );
         }
         for t in 0..5 {
-            // self.f_buf[t] = self.h_buf[t];
-            self.f_buf[t].clone_from(&self.h_buf[t]);
+            self.f_buf[t] = self.h_buf[t]; // Works
+                                           // self.f_buf[t].clone_from(&self.h_buf[t]);
         }
         for t in 0..80_usize {
             let mut temp: u32 = 0;

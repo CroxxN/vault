@@ -6,7 +6,7 @@
 
 - Secure Hash Algorithm Family:
   - [ ] SHA0 
-  - [ ] SHA1 
+  - [x] SHA1 
   - [ ] SHA2 
 
 - AES Family:
