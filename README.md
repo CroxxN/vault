@@ -5,9 +5,10 @@
 ### Implementation goals:
 
 - Secure Hash Algorithm Family:
-  - [ ] SHA0 
   - [x] SHA1 
-  - [ ] SHA2 
+  - [ ] SHA2
+  - [ ] SHA256
+  - [ ] SHA512
 
 - AES Family:
   - [ ] AES-128
