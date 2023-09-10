@@ -52,7 +52,6 @@ impl Sha1 {
         if last_index_value < 56 {
             self.process_hash_last(&input[curr_idx..], true);
         } else {
-            dbg!(last_index_value);
             self.process_hash_cont(&input[curr_idx..], true);
             self.process_hash_last(&[0], false);
         }
@@ -66,16 +65,13 @@ impl Sha1 {
             *t = input[i];
         });
         if flag {
-            dbg!(input.len());
             temp[input.len()] = 0x80;
-            dbg!(temp[input.len()]);
         }
         temp.to_owned()
     }
     // Maybe you need to clean the words for each round trip of the message digest
     fn process_hash(&mut self, input: &[u8], flag: bool) {
         let temp = Self::initialize_bits(input, flag);
-        dbg!(input.len() / 4);
         let mut limit = input.len() / 4;
         if flag {
             limit = limit + 1;
@@ -93,7 +89,6 @@ impl Sha1 {
                     | (temp[len + 1] as u32) << 16
                     | (temp[len] as u32) << 24;
             });
-        dbg!(self.word[input.len()]);
         self.compute_hash();
         // self.hash(&temp);
     }
@@ -105,6 +100,7 @@ impl Sha1 {
     fn process_hash_cont(&mut self, _input: &[u8], flag: bool) {
         self.process_hash(_input, flag);
     }
+    // TODO: Implement SHA-1 for files
 
     // pub fn initiate_file(&mut self, message: PathBuf) {
     //     let mut file = std::fs::File::open(message).unwrap();
@@ -112,9 +108,7 @@ impl Sha1 {
     //     file.read_to_end(&mut message).unwrap();
     //     let len = message.len();
     // }
-    // pub fn from_str(msg: &str) {
-    //     // let bytes = msg.bytes().collect();
-    // }
+
     fn f(&self, i: &usize) -> u32 {
         if *i < 20 {
             (self.f_buf[1] & self.f_buf[2]) | (!self.f_buf[1] & self.f_buf[3])
@@ -213,7 +207,7 @@ mod test {
             [0xb5ed281b, 0xcb6242b2, 0x889eb9a9, 0xc1727f3e, 0x9ab6dac4]
         );
     }
-    // Fails
+    // Passes
     #[test]
     fn long_hash() {
         let mut sha = Sha1::new();
