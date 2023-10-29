@@ -20,7 +20,7 @@ pub struct Sha1 {
 }
 
 impl Sha1 {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             num_blocks: 0,
             message_length: 0,
@@ -30,10 +30,10 @@ impl Sha1 {
             word: [0; 80],
         }
     }
-    pub fn get_hash(&self) -> [u32; 5] {
+    pub const fn get_hash(&self) -> [u32; 5] {
         self.h_buf
     }
-    pub fn get_words(&self, n: usize) -> u32 {
+    pub const fn get_words(&self, n: usize) -> u32 {
         self.word[n]
     }
     pub fn append_hash(&mut self, input: &[u8]) {
@@ -56,7 +56,7 @@ impl Sha1 {
             self.process_hash_last(&[0], false);
         }
     }
-    pub fn reset_hash(self) -> Self {
+    pub const fn reset_hash(self) -> Self {
         Sha1::new()
     }
     fn initialize_bits(input: &[u8], flag: bool) -> [u8; 64] {
@@ -109,7 +109,7 @@ impl Sha1 {
     //     let len = message.len();
     // }
 
-    fn f(&self, i: &usize) -> u32 {
+    const fn f(&self, i: &usize) -> u32 {
         if *i < 20 {
             (self.f_buf[1] & self.f_buf[2]) | (!self.f_buf[1] & self.f_buf[3])
         } else if *i >= 40 && *i <= 59 {
