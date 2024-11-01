@@ -21,3 +21,6 @@
   - [ ] CRC32
 
   
+## References
+
+- [RFC 3174](https://datatracker.ietf.org/doc/html/rfc3174)
