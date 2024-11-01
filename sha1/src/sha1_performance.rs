@@ -3,6 +3,8 @@
 // TODO: Remove unsafe, implement message to word array, and make the code ergonomic
 
 use crate::constants::K;
+use crate::error::Error;
+use std::fmt::Write;
 
 macro_rules! shift_rotate {
     ($num:literal ,$expression:expr) => {
@@ -153,6 +155,17 @@ impl Sha1 {
             self.h_buf[t] = self.h_buf[t].wrapping_add(self.f_buf[t]);
         }
     }
+    pub fn get_ascii_hash(&self) -> Result<String, Error> {
+        let mut ascii_hash = String::new();
+        let res = self
+            .get_hash()
+            .iter()
+            .try_for_each(|x| write!(&mut ascii_hash, "{:x}", *x));
+        if res.is_err() {
+            return Err(Error::FailWrite);
+        }
+        Ok(ascii_hash)
+    }
 }
 
 #[cfg(test)]
@@ -163,13 +176,24 @@ mod test {
     #[test]
     fn normal() {
         let mut sha = Sha1::new();
-        eprintln!("{:?}", b"abc");
         sha.append_hash(b"abc");
         assert_eq!(
             sha.get_hash(),
             [0xA9993E36, 0x4706816A, 0xBA3E2571, 0x7850C26C, 0x9CD0D89D]
         );
     }
+
+    #[test]
+    fn ascii_hash() {
+        let mut sha = Sha1::new();
+        sha.append_hash(b"abc");
+        // sha.append_hash(b"c");
+        assert_eq!(
+            sha.get_ascii_hash().unwrap(),
+            "a9993e364706816aba3e25717850c26c9cd0d89d"
+        );
+    }
+
     #[test]
     fn only_a() {
         let mut sha = Sha1::new();
@@ -179,6 +203,7 @@ mod test {
             [0x86f7e437, 0xfaa5a7fc, 0xe15d1ddc, 0xb9eaeaea, 0x377667b8]
         );
     }
+
     #[test]
     fn a_and_b() {
         let mut sha = Sha1::new();

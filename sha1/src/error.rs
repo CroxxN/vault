@@ -1,7 +1,4 @@
+#[derive(Debug)]
 pub enum Error {
-    Corrupted,
-    ByteReadError,
-    ChunckSplitError,
+    FailWrite,
 }
-
-impl std::error::Error for Error {}

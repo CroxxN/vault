@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 mod constants;
+mod error;
 mod sha1_performance;
 
 use std::path;
